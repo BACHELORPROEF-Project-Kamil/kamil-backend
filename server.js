@@ -15,6 +15,7 @@ app.use(helmet());
 app.use(express.json());
 
 app.use('/api/v1/check', require('./routes/checkRoutes'));
+app.use('/api/v1/stats', require('./routes/statsRoutes'));
 
 app.get('/', (req, res) => {
   res.send('API is running...');
