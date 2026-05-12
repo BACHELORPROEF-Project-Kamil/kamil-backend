@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const { checkDomainAge } = require("../utils/dnsChecker");
+const User = require("../models/User");
 
 router.post("/", async (req, res) => {
 	try {
-		const { url } = req.body;
+		const { url, uid } = req.body;
 
 		if (!url) {
 			return res.status(400).json({ status: "error", message: "No URL provided" });
@@ -35,9 +36,34 @@ router.post("/", async (req, res) => {
 			});
 		}
 
+		let userStats = null;
+		if (uid) {
+			const isWarning = status !== "good";
+			userStats = await User.findOneAndUpdate(
+				{ uid: uid },
+				{
+					$inc: {
+						total_checks: 1,
+						phishing_warnings: isWarning ? 1 : 0,
+					},
+					$set: {
+						last_active: new Date(),
+					},
+				},
+				{ upsert: true, new: true },
+			);
+		}
+
 		res.json({
 			status: findings.length > 0 ? status : "good",
 			findings: findings,
+
+			user_stats: userStats
+				? {
+						total_checks: userStats.total_checks,
+						phishing_warnings: userStats.phishing_warnings,
+					}
+				: null,
 		});
 	} catch (err) {
 		console.error("Error in checkRoutes:", err);
